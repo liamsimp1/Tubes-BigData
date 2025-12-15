@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 import random
 
 # ========== KONFIGURASI MONGODB ATLAS ==========
-MONGODB_USERNAME = "f1d02310107"
+MONGODB_USERNAME = ""
 MONGODB_PASSWORD = ""
 MONGODB_CLUSTER = ""
 
