@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 import random
 
 # ========== KONFIGURASI MONGODB ATLAS ==========
-MONGODB_USERNAME = ""
+MONGODB_USERNAME = "f1d02310107"
 MONGODB_PASSWORD = ""
 MONGODB_CLUSTER = ""
 
@@ -56,7 +56,7 @@ CITY_COORDINATES = {
 
 # ========== SETUP PAGE ==========
 st.set_page_config(
-    page_title="🚨 Sistem Deteksi Bullying - Dashboard Final",
+    page_title="Sistem Deteksi Bullying - Dashboard",
     page_icon="🚨",
     layout="wide"
 )
@@ -469,7 +469,7 @@ def create_matching_complete_dashboard(tweets_df, cctv_df, alerts_df):
 # ========== FUNGSI UTAMA DASHBOARD ==========
 def main():
     # Header
-    st.markdown('<h1 class="main-header">🚨 Sistem Deteksi Bullying - Dashboard Final</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🚨 Sistem Deteksi Bullying 🚨</h1>', unsafe_allow_html=True)
     st.markdown("**Dashboard dengan Peta Heatmap Indonesia**")
     
     # Load data
@@ -676,7 +676,7 @@ def main():
                     if fig_fallback2:
                         st.plotly_chart(fig_fallback2, use_container_width=True)
     
-    # Tab 4: Tweet & CCTV Log - FIXED VERSION
+    # Tab 4: Tweet & CCTV Log
     with tab4:
         st.markdown('<div class="sub-header">📝 Data Tweet & CCTV Log Lengkap</div>', unsafe_allow_html=True)
         
@@ -1008,7 +1008,7 @@ def main():
                 else:
                     st.info("Tidak ada log CCTV yang sesuai dengan filter")
     
-    # Tab 5: Data Detail - FIXED VERSION
+    # Tab 5: Data Detail
     with tab5:
         st.markdown('<div class="sub-header">📋 Data Detail dari MongoDB</div>', unsafe_allow_html=True)
         

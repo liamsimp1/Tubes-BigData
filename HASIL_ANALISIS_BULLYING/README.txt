@@ -2,7 +2,7 @@
 HASIL ANALISIS SISTEM DETEKSI BULLYING
 ============================================================
 
-Tanggal Ekspor: 2025-12-15 16:34:40
+Tanggal Ekspor: 2025-12-15 19:44:04
 Folder Base: HASIL_ANALISIS_BULLYING
 
 📂 STRUKTUR FOLDER:
@@ -14,6 +14,6 @@ Folder Base: HASIL_ANALISIS_BULLYING
   └── 📁 dashboard_assets/- Asset untuk dashboard
 
 📊 DATA YANG DIEXPORT:
-  • Tweet: 10000 data
-  • CCTV Logs: 6300 data
-  • Alerts: 6945 data
+  • Tweet: 10500 data
+  • CCTV Logs: 6600 data
+  • Alerts: 7418 data
