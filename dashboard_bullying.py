@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 import random
 
 # ========== KONFIGURASI MONGODB ATLAS ==========
-MONGODB_USERNAME = ""
+MONGODB_USERNAME = "f1d02310107"
 MONGODB_PASSWORD = ""
 MONGODB_CLUSTER = ""
 
@@ -102,6 +102,15 @@ st.markdown("""
         font-weight: 600;
         border-radius: 10px 10px 0 0;
     }
+    .data-container {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 10px;
+        background-color: #f9f9f9;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,44 +131,66 @@ def init_connection():
 # ========== FUNGSI LOAD DATA ==========
 @st.cache_data(ttl=30)
 def load_mongodb_data():
-    """Load data dari MongoDB - FIX error"""
+    """Load data dari MongoDB - FIX error dengan debug info"""
     db = init_connection()
     
-    # FIX: Pakai 'is None' bukan 'if not db'
     if db is None:
         st.warning("⚠️ Menggunakan data dummy karena tidak bisa konek ke MongoDB")
         return create_dummy_data(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     
     try:
-        # AMBIL DATA seperti di notebook
-        tweets = list(db[COLLECTION_TWEETS].find({"processed": True}).limit(2000))
-        cctv = list(db[COLLECTION_CCTV].find().limit(1000))
-        alerts = list(db[COLLECTION_ALERTS].find().limit(500))
-        schools = list(db[COLLECTION_SCHOOLS].find().limit(100))
+        # AMBIL DATA dengan debug print
+        print("🔍 Loading data from MongoDB...")
+        
+        # Tweets
+        tweets = list(db[COLLECTION_TWEETS].find({"processed": True}))
+        print(f"   • Tweets loaded: {len(tweets)}")
+        if tweets:
+            print(f"   • Tweet fields: {list(tweets[0].keys())[:10]}...")
+        
+        # CCTV - ambil semua, tidak ada filter
+        cctv = list(db[COLLECTION_CCTV].find())
+        print(f"   • CCTV logs loaded: {len(cctv)}")
+        if cctv:
+            print(f"   • CCTV fields: {list(cctv[0].keys())}")
+        
+        # Alerts
+        alerts = list(db[COLLECTION_ALERTS].find())
+        print(f"   • Alerts loaded: {len(alerts)}")
+        
+        # Schools
+        schools = list(db[COLLECTION_SCHOOLS].find())
+        print(f"   • Schools loaded: {len(schools)}")
         
         return tweets, cctv, alerts, schools
         
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        import traceback
+        traceback.print_exc()
         return create_dummy_data(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 def create_dummy_data():
     """Buat data dummy jika MongoDB error"""
     print("⚠️ Membuat data dummy...")
     
-    cities = list(CITY_COORDINATES.keys())[:10]  # Ambil 10 kota pertama
+    cities = list(CITY_COORDINATES.keys())[:10]
     sentiments = ['positif', 'netral', 'negatif']
     risk_levels = ['merah', 'kuning', 'hijau', 'aman']
+    categories = ['korban_direct', 'pelaku', 'saksi', 'support', 'report', 'positif_umum']
+    locations = ['gerbang', 'lorong', 'kantin', 'lapangan', 'parkir', 'toilet', 'kelas']
     
-    data = []
-    for i in range(1000):
+    # Buat dummy tweets
+    tweets_data = []
+    for i in range(500):
         city = random.choice(cities)
         sentiment = random.choices(sentiments, weights=[0.2, 0.3, 0.5])[0]
         risk_level = random.choices(risk_levels, weights=[0.3, 0.4, 0.2, 0.1])[0]
+        category = random.choice(categories)
         
-        data.append({
-            'tweet_id': f'dummy_{i}',
-            'text': f'Sample tweet tentang bullying di sekolah {i}',
+        tweets_data.append({
+            'tweet_id': f'dummy_tweet_{i}',
+            'text': f'Contoh tweet tentang bullying di sekolah {i} di kota {city}',
             'city': city,
             'sentiment': sentiment,
             'risk_level': risk_level,
@@ -167,11 +198,31 @@ def create_dummy_data():
             'bullying_detected': risk_level in ['merah', 'kuning'],
             'created_at': datetime.now() - timedelta(days=random.randint(0, 30)),
             'school': f'SMP Negeri {random.randint(1, 5)} {city}',
-            'category': random.choice(['korban', 'pelaku', 'saksi', 'unknown']),
+            'category': category,
             'processed': True
         })
     
-    return data
+    # Buat dummy CCTV logs
+    cctv_data = []
+    for i in range(100):
+        city = random.choice(cities)
+        location = random.choice(locations)
+        
+        cctv_data.append({
+            'log_id': f'cctv_log_{i}',
+            'cctv_id': f'cctv_{random.randint(1, 20)}',
+            'school': f'SMP Negeri {random.randint(1, 5)} {city}',
+            'city': city,
+            'location': location,
+            'timestamp': datetime.now() - timedelta(hours=random.randint(0, 72)),
+            'crowd_level': random.randint(1, 100),
+            'noise_level': random.randint(30, 90),
+            'is_anomaly': random.choice([True, False, False, False]),  # 25% anomaly
+            'warning_level': random.choice(['merah', 'kuning', 'hijau']),
+            'processed': False
+        })
+    
+    return tweets_data, cctv_data, [], []
 
 # ========== FUNGSI UNTUK PETA ==========
 def create_indonesia_heatmap(tweets_df, cctv_df):
@@ -428,6 +479,20 @@ def main():
     tweets_df = pd.DataFrame(tweets_data) if tweets_data else pd.DataFrame()
     cctv_df = pd.DataFrame(cctv_data) if cctv_data else pd.DataFrame()
     alerts_df = pd.DataFrame(alerts_data) if alerts_data else pd.DataFrame()
+    schools_df = pd.DataFrame(schools_data) if schools_data else pd.DataFrame()
+    
+    # Debug info di sidebar
+    with st.sidebar.expander("🔍 Debug Info", expanded=False):
+        st.write(f"**Data Loaded:**")
+        st.write(f"• Tweets: {len(tweets_df)} rows")
+        st.write(f"• CCTV Logs: {len(cctv_df)} rows")
+        st.write(f"• Alerts: {len(alerts_df)} rows")
+        
+        if not tweets_df.empty:
+            st.write(f"**Tweet Columns:** {list(tweets_df.columns)[:10]}")
+        
+        if not cctv_df.empty:
+            st.write(f"**CCTV Columns:** {list(cctv_df.columns)}")
     
     # ========== SIDEBAR ==========
     st.sidebar.title("⚙️ Kontrol Dashboard")
@@ -496,10 +561,11 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ========== TABS ==========
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🗺️ Peta Heatmap", 
         "📊 Visualisasi", 
         "📈 Dashboard Lengkap",
+        "📝 Tweet & CCTV Log",
         "📋 Data Detail"
     ])
     
@@ -610,7 +676,340 @@ def main():
                     if fig_fallback2:
                         st.plotly_chart(fig_fallback2, use_container_width=True)
     
+    # Tab 4: Tweet & CCTV Log - FIXED VERSION
     with tab4:
+        st.markdown('<div class="sub-header">📝 Data Tweet & CCTV Log Lengkap</div>', unsafe_allow_html=True)
+        
+        # Sub-tabs untuk tweet dan CCTV
+        sub_tab1, sub_tab2 = st.tabs(["📨 Semua Tweet", "📹 CCTV Log"])
+        
+        with sub_tab1:
+            if tweets_df.empty:
+                st.info("📭 Tidak ada data tweet yang tersedia")
+                st.write("Jalankan pipeline di notebook untuk generate data tweet")
+            else:
+                st.markdown("**🔍 Filter Data Tweet:**")
+                
+                # Dapatkan unique values untuk filter
+                unique_cities = ["Semua"]
+                if 'city' in tweets_df.columns:
+                    city_list = sorted([str(c) for c in tweets_df['city'].dropna().unique()])
+                    unique_cities += city_list[:15]  # Batasi ke 15 kota pertama
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    selected_city = st.selectbox(
+                        "Pilih Kota:",
+                        unique_cities,
+                        key="city_filter_tab4"
+                    )
+                
+                with col2:
+                    selected_risk = st.selectbox(
+                        "Pilih Risk Level:",
+                        ["Semua", "merah", "kuning", "hijau", "aman"],
+                        key="risk_filter_tab4"
+                    )
+                
+                with col3:
+                    selected_sentiment = st.selectbox(
+                        "Pilih Sentimen:",
+                        ["Semua", "positif", "netral", "negatif"],
+                        key="sentiment_filter_tab4"
+                    )
+                
+                # Filter data
+                filtered_tweets = tweets_df.copy()
+                
+                if selected_city != "Semua" and 'city' in filtered_tweets.columns:
+                    filtered_tweets = filtered_tweets[filtered_tweets['city'] == selected_city]
+                
+                if selected_risk != "Semua" and 'risk_level' in filtered_tweets.columns:
+                    filtered_tweets = filtered_tweets[filtered_tweets['risk_level'] == selected_risk]
+                
+                if selected_sentiment != "Semua" and 'sentiment' in filtered_tweets.columns:
+                    filtered_tweets = filtered_tweets[filtered_tweets['sentiment'] == selected_sentiment]
+                
+                # Tampilkan jumlah hasil
+                st.markdown(f"**📊 Menampilkan {len(filtered_tweets)} dari {len(tweets_df)} tweet**")
+                
+                if not filtered_tweets.empty:
+                    # Pagination
+                    items_per_page = st.selectbox(
+                        "Items per page:",
+                        [10, 25, 50, 100],
+                        index=1,
+                        key="tweet_pagination_tab4"
+                    )
+                    
+                    total_pages = max(1, (len(filtered_tweets) + items_per_page - 1) // items_per_page)
+                    page_number = st.number_input(
+                        "Page:",
+                        min_value=1,
+                        max_value=total_pages,
+                        value=1,
+                        step=1,
+                        key="tweet_page_tab4"
+                    )
+                    
+                    start_idx = (page_number - 1) * items_per_page
+                    end_idx = min(start_idx + items_per_page, len(filtered_tweets))
+                    
+                    st.write(f"**Halaman {page_number}/{total_pages}** (Item {start_idx+1}-{end_idx})")
+                    
+                    # Container dengan scroll
+                    st.markdown('<div class="data-container">', unsafe_allow_html=True)
+                    
+                    for idx in range(start_idx, end_idx):
+                        tweet = filtered_tweets.iloc[idx]
+                        
+                        # Format date jika ada
+                        created_at = tweet.get('created_at', 'N/A')
+                        if isinstance(created_at, (datetime, pd.Timestamp)):
+                            created_at_str = created_at.strftime('%Y-%m-%d %H:%M')
+                        else:
+                            created_at_str = str(created_at)
+                        
+                        # Format city
+                        city = str(tweet.get('city', 'N/A'))
+                        
+                        # Risk color mapping
+                        risk_level = tweet.get('risk_level', 'aman')
+                        risk_color = {
+                            'merah': '🔴',
+                            'kuning': '🟡', 
+                            'hijau': '🟢',
+                            'aman': '🔵'
+                        }.get(risk_level, '⚪')
+                        
+                        # Buat expander
+                        with st.expander(f"Tweet dari {city} - {created_at_str}", expanded=False):
+                            col_a, col_b = st.columns([3, 1])
+                            
+                            with col_a:
+                                # Text (potong jika terlalu panjang)
+                                text = str(tweet.get('text', 'N/A'))
+                                if len(text) > 300:
+                                    text = text[:300] + "..."
+                                st.write(f"**💬 Text:** {text}")
+                                
+                                # School
+                                school = str(tweet.get('school', 'N/A'))
+                                st.write(f"**🏫 Sekolah:** {school}")
+                            
+                            with col_b:
+                                st.write(f"{risk_color} **Risk:** {risk_level}")
+                                
+                                # Sentiment dengan emoji
+                                sentiment = tweet.get('sentiment', 'N/A')
+                                sentiment_emoji = {
+                                    'positif': '😊',
+                                    'netral': '😐', 
+                                    'negatif': '😔'
+                                }.get(sentiment, '❓')
+                                st.write(f"{sentiment_emoji} **Sentimen:** {sentiment}")
+                                
+                                # Risk score
+                                risk_score = tweet.get('risk_score', 'N/A')
+                                st.write(f"📊 **Score:** {risk_score}/20")
+                            
+                            # Footer info
+                            st.caption(f"ID: {tweet.get('tweet_id', 'N/A')} • Category: {tweet.get('category', 'N/A')}")
+                    
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Download button
+                    if 'text' in filtered_tweets.columns:
+                        download_cols = ['text', 'city', 'school', 'sentiment', 'risk_level', 'risk_score', 'created_at']
+                        available_cols = [col for col in download_cols if col in filtered_tweets.columns]
+                        
+                        if available_cols:
+                            csv_tweets = filtered_tweets[available_cols].to_csv(index=False)
+                            st.download_button(
+                                label="📥 Download Data Tweet (CSV)",
+                                data=csv_tweets,
+                                file_name=f"tweet_data_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                                mime="text/csv",
+                                key="download_tweets_tab4"
+                            )
+                else:
+                    st.info("Tidak ada tweet yang sesuai dengan filter")
+        
+        with sub_tab2:
+            if cctv_df.empty:
+                st.info("📭 Tidak ada data CCTV yang tersedia")
+                st.write("Jalankan fungsi `generate_cctv_data()` di notebook untuk membuat data CCTV")
+            else:
+                st.markdown("**🔍 Filter CCTV Log:**")
+                
+                # Dapatkan unique values untuk filter
+                cctv_cities = ["Semua"]
+                if 'city' in cctv_df.columns:
+                    city_list = sorted([str(c) for c in cctv_df['city'].dropna().unique()])
+                    cctv_cities += city_list[:10]  # Batasi ke 10 kota pertama
+                
+                cctv_locations = ["Semua"]
+                if 'location' in cctv_df.columns:
+                    location_list = sorted([str(l) for l in cctv_df['location'].dropna().unique()])
+                    cctv_locations += location_list
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    cctv_city_filter = st.selectbox(
+                        "Pilih Kota CCTV:",
+                        cctv_cities,
+                        key="cctv_city_filter_tab4"
+                    )
+                
+                with col2:
+                    cctv_location_filter = st.selectbox(
+                        "Pilih Lokasi:",
+                        cctv_locations,
+                        key="cctv_location_filter_tab4"
+                    )
+                
+                with col3:
+                    cctv_anomaly_filter = st.selectbox(
+                        "Status Anomali:",
+                        ["Semua", "Anomali", "Normal"],
+                        key="cctv_anomaly_filter_tab4"
+                    )
+                
+                # Filter CCTV data
+                filtered_cctv = cctv_df.copy()
+                
+                if cctv_city_filter != "Semua" and 'city' in filtered_cctv.columns:
+                    filtered_cctv = filtered_cctv[filtered_cctv['city'] == cctv_city_filter]
+                
+                if cctv_location_filter != "Semua" and 'location' in filtered_cctv.columns:
+                    filtered_cctv = filtered_cctv[filtered_cctv['location'] == cctv_location_filter]
+                
+                if cctv_anomaly_filter != "Semua":
+                    if cctv_anomaly_filter == "Anomali":
+                        filtered_cctv = filtered_cctv[filtered_cctv['is_anomaly'] == True]
+                    else:
+                        filtered_cctv = filtered_cctv[filtered_cctv['is_anomaly'] == False]
+                
+                # Tampilkan jumlah hasil
+                st.markdown(f"**📊 Menampilkan {len(filtered_cctv)} dari {len(cctv_df)} log CCTV**")
+                
+                if not filtered_cctv.empty:
+                    # Pagination untuk CCTV
+                    cctv_items_per_page = st.selectbox(
+                        "Items per page CCTV:",
+                        [10, 25, 50, 100],
+                        index=1,
+                        key="cctv_items_tab4"
+                    )
+                    
+                    cctv_total_pages = max(1, (len(filtered_cctv) + cctv_items_per_page - 1) // cctv_items_per_page)
+                    cctv_page_number = st.number_input(
+                        "Page CCTV:",
+                        min_value=1,
+                        max_value=cctv_total_pages,
+                        value=1,
+                        step=1,
+                        key="cctv_page_tab4"
+                    )
+                    
+                    cctv_start_idx = (cctv_page_number - 1) * cctv_items_per_page
+                    cctv_end_idx = min(cctv_start_idx + cctv_items_per_page, len(filtered_cctv))
+                    
+                    st.write(f"**Halaman {cctv_page_number}/{cctv_total_pages}** (Item {cctv_start_idx+1}-{cctv_end_idx})")
+                    
+                    # Container dengan scroll
+                    st.markdown('<div class="data-container">', unsafe_allow_html=True)
+                    
+                    for idx in range(cctv_start_idx, cctv_end_idx):
+                        log = filtered_cctv.iloc[idx]
+                        
+                        # Format timestamp
+                        timestamp = log.get('timestamp', 'N/A')
+                        if isinstance(timestamp, (datetime, pd.Timestamp)):
+                            timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M')
+                        else:
+                            timestamp_str = str(timestamp)
+                        
+                        # Anomaly status
+                        is_anomaly = log.get('is_anomaly', False)
+                        anomaly_status = "🔴 ANOMALI" if is_anomaly else "🟢 NORMAL"
+                        anomaly_color = "🔴" if is_anomaly else "🟢"
+                        
+                        # CCTV ID - coba beberapa kemungkinan field
+                        cctv_id = log.get('cctv_id', 'N/A')
+                        if cctv_id == 'N/A':
+                            cctv_id = log.get('log_id', 'N/A')  # Coba field alternatif
+                        
+                        # Buat expander
+                        with st.expander(f"{anomaly_color} CCTV {cctv_id} - {timestamp_str}", expanded=False):
+                            col_a, col_b = st.columns(2)
+                            
+                            with col_a:
+                                # School
+                                school = str(log.get('school', 'N/A'))
+                                st.write(f"**🏫 Sekolah:** {school}")
+                                
+                                # Location
+                                location = str(log.get('location', 'N/A'))
+                                st.write(f"**📍 Lokasi:** {location}")
+                                
+                                # City
+                                city = str(log.get('city', 'N/A'))
+                                st.write(f"**🌆 Kota:** {city}")
+                            
+                            with col_b:
+                                # Status
+                                st.write(f"**📊 Status:** {anomaly_status}")
+                                
+                                # Warning level
+                                warning_level = log.get('warning_level', 'N/A')
+                                warning_emoji = {
+                                    'merah': '🔴',
+                                    'kuning': '🟡',
+                                    'hijau': '🟢'
+                                }.get(warning_level, '⚪')
+                                st.write(f"{warning_emoji} **Warning:** {warning_level}")
+                                
+                                # Metrics
+                                crowd_level = log.get('crowd_level', 'N/A')
+                                noise_level = log.get('noise_level', 'N/A')
+                                st.write(f"**👥 Keramaian:** {crowd_level} orang")
+                                st.write(f"**🔊 Kebisingan:** {noise_level} dB")
+                    
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Download button untuk CCTV
+                    available_cctv_cols = []
+                    possible_cols = ['timestamp', 'cctv_id', 'log_id', 'school', 'city', 'location', 
+                                   'crowd_level', 'noise_level', 'is_anomaly', 'warning_level']
+                    
+                    for col in possible_cols:
+                        if col in filtered_cctv.columns:
+                            available_cctv_cols.append(col)
+                    
+                    if available_cctv_cols:
+                        # Buat copy untuk download
+                        download_cctv = filtered_cctv[available_cctv_cols].copy()
+                        
+                        # Format timestamp untuk CSV
+                        if 'timestamp' in download_cctv.columns:
+                            download_cctv['timestamp'] = download_cctv['timestamp'].apply(
+                                lambda x: x.strftime('%Y-%m-%d %H:%M') if isinstance(x, (datetime, pd.Timestamp)) else str(x)
+                            )
+                        
+                        csv_cctv = download_cctv.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Download Data CCTV (CSV)",
+                            data=csv_cctv,
+                            file_name=f"cctv_logs_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                            mime="text/csv",
+                            key="download_cctv_tab4"
+                        )
+                else:
+                    st.info("Tidak ada log CCTV yang sesuai dengan filter")
+    
+    # Tab 5: Data Detail - FIXED VERSION
+    with tab5:
         st.markdown('<div class="sub-header">📋 Data Detail dari MongoDB</div>', unsafe_allow_html=True)
         
         if not tweets_df.empty:
@@ -620,29 +1019,35 @@ def main():
             with col1:
                 st.write("**📊 Distribusi Sentimen:**")
                 if 'sentiment' in tweets_df.columns:
-                    for sent, count in tweets_df['sentiment'].value_counts().items():
-                        st.write(f"- {sent}: {count}")
+                    sentiment_counts = tweets_df['sentiment'].value_counts()
+                    for sent, count in sentiment_counts.items():
+                        percentage = (count / len(tweets_df)) * 100
+                        st.write(f"- {sent}: {count} ({percentage:.1f}%)")
                 else:
-                    st.write("Tidak ada data")
+                    st.write("Kolom 'sentiment' tidak ditemukan")
             
             with col2:
                 st.write("**⚠️ Distribusi Risk Level:**")
                 if 'risk_level' in tweets_df.columns:
-                    for risk, count in tweets_df['risk_level'].value_counts().items():
-                        st.write(f"- {risk}: {count}")
+                    risk_counts = tweets_df['risk_level'].value_counts()
+                    for risk, count in risk_counts.items():
+                        percentage = (count / len(tweets_df)) * 100
+                        st.write(f"- {risk}: {count} ({percentage:.1f}%)")
                 else:
-                    st.write("Tidak ada data")
+                    st.write("Kolom 'risk_level' tidak ditemukan")
             
             with col3:
                 st.write("**📍 Top 5 Kota:**")
                 if 'city' in tweets_df.columns:
-                    for city, count in tweets_df['city'].value_counts().head(5).items():
-                        st.write(f"- {city}: {count}")
+                    city_counts = tweets_df['city'].value_counts().head(5)
+                    for city, count in city_counts.items():
+                        percentage = (count / len(tweets_df)) * 100
+                        st.write(f"- {city}: {count} ({percentage:.1f}%)")
                 else:
-                    st.write("Tidak ada data")
+                    st.write("Kolom 'city' tidak ditemukan")
             
             # Tampilkan sample data
-            st.subheader("Sample Data Tweet (10 terbaru)")
+            st.subheader("📊 Sample Data Tweet (10 terbaru)")
             
             # Sort by date jika ada
             if 'created_at' in tweets_df.columns:
@@ -651,7 +1056,7 @@ def main():
                 tweets_df_sorted = tweets_df
             
             # Pilih kolom untuk ditampilkan
-            show_cols = ['city', 'sentiment', 'risk_level', 'risk_score', 'bullying_detected', 'created_at']
+            show_cols = ['text', 'city', 'school', 'sentiment', 'risk_level', 'risk_score', 'category', 'created_at']
             available_cols = [col for col in show_cols if col in tweets_df_sorted.columns]
             
             if available_cols:
@@ -661,24 +1066,91 @@ def main():
                 if 'created_at' in sample_df.columns:
                     sample_df['created_at'] = pd.to_datetime(sample_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
                 
-                # Format risk score
-                if 'risk_score' in sample_df.columns:
-                    sample_df['risk_score'] = sample_df['risk_score'].apply(lambda x: f"{x}/20")
+                # Format text (potong jika terlalu panjang)
+                if 'text' in sample_df.columns:
+                    sample_df['text'] = sample_df['text'].apply(lambda x: x[:100] + '...' if len(str(x)) > 100 else str(x))
                 
-                st.dataframe(sample_df, use_container_width=True)
+                # Tampilkan dataframe
+                st.dataframe(sample_df, use_container_width=True, height=400)
                 
                 # Download button
                 csv = sample_df.to_csv(index=False)
                 st.download_button(
                     label="📥 Download Sample Data (CSV)",
                     data=csv,
-                    file_name=f"sample_data_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv"
+                    file_name=f"sample_tweets_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    key="download_sample_tab5"
                 )
             else:
                 st.info("Kolom data tidak tersedia")
         else:
-            st.info("Tidak ada data tweet")
+            st.info("Tidak ada data tweet yang tersedia")
+        
+        # CCTV Data Section
+        st.subheader("📹 Data CCTV Log")
+        
+        if not cctv_df.empty:
+            # Tampilkan distribusi CCTV
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**📍 Lokasi CCTV:**")
+                if 'location' in cctv_df.columns:
+                    location_counts = cctv_df['location'].value_counts()
+                    for loc, count in location_counts.items():
+                        percentage = (count / len(cctv_df)) * 100
+                        st.write(f"- {loc}: {count} ({percentage:.1f}%)")
+            
+            with col2:
+                st.write("**⚠️ Status Anomali:**")
+                if 'is_anomaly' in cctv_df.columns:
+                    anomaly_counts = cctv_df['is_anomaly'].value_counts()
+                    total = len(cctv_df)
+                    for status, count in anomaly_counts.items():
+                        status_text = "Anomali" if status else "Normal"
+                        percentage = (count / total) * 100
+                        st.write(f"- {status_text}: {count} ({percentage:.1f}%)")
+            
+            # Tampilkan sample CCTV data
+            st.write("**Sample CCTV Logs (10 terbaru):**")
+            
+            # Sort by timestamp jika ada
+            if 'timestamp' in cctv_df.columns:
+                cctv_df_sorted = cctv_df.sort_values('timestamp', ascending=False)
+            else:
+                cctv_df_sorted = cctv_df
+            
+            # Pilih kolom CCTV untuk ditampilkan
+            cctv_show_cols = ['cctv_id', 'log_id', 'school', 'city', 'location', 'crowd_level', 'noise_level', 'is_anomaly', 'timestamp']
+            cctv_available_cols = [col for col in cctv_show_cols if col in cctv_df_sorted.columns]
+            
+            if cctv_available_cols:
+                cctv_sample = cctv_df_sorted[cctv_available_cols].head(10).copy()
+                
+                # Format timestamp
+                if 'timestamp' in cctv_sample.columns:
+                    cctv_sample['timestamp'] = pd.to_datetime(cctv_sample['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
+                
+                # Format boolean untuk anomaly
+                if 'is_anomaly' in cctv_sample.columns:
+                    cctv_sample['is_anomaly'] = cctv_sample['is_anomaly'].apply(lambda x: '✅ YA' if x else '❌ TIDAK')
+                
+                st.dataframe(cctv_sample, use_container_width=True, height=300)
+                
+                # Download button untuk CCTV
+                csv_cctv = cctv_sample.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Sample CCTV (CSV)",
+                    data=csv_cctv,
+                    file_name=f"sample_cctv_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    key="download_cctv_tab5"
+                )
+            else:
+                st.info("Kolom data CCTV tidak tersedia")
+        else:
+            st.info("Tidak ada data CCTV yang tersedia")
     
     # ========== FOOTER ==========
     st.markdown("---")

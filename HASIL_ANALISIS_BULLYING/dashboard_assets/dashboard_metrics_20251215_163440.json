@@ -1,0 +1,7 @@
+{
+  "total_tweets": 10000,
+  "total_cctv_logs": 6300,
+  "high_risk_tweets": 6661,
+  "cctv_anomalies": 2487,
+  "export_time": "2025-12-15 16:34:40"
+}

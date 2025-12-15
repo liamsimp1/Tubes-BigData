@@ -1,0 +1,11 @@
+cctv_id,school,city,location,timestamp,crowd_level,noise_level,is_anomaly
+cctv_1,SMA Negeri 1 Malang,Malang,kantin,2025-12-14 08:27,43,31,YA
+cctv_33,SMA Negeri 4 Palembang,Palembang,parkir,2025-12-14 10:11,73,91,TIDAK
+cctv_24,SMA Negeri 2 Bekasi,Bekasi,kantin,2025-12-14 13:17,4,63,TIDAK
+cctv_32,SMA Negeri 1 Makassar,Makassar,kantin,2025-12-14 07:55,74,30,YA
+cctv_17,SMA Negeri 1 Medan,Medan,kelas,2025-12-14 15:55,1,76,YA
+cctv_30,SMA Negeri 1 Tangerang,Tangerang,kantin,2025-12-14 10:01,71,75,TIDAK
+cctv_24,SMA Negeri 3 Tangerang,Tangerang,lorong,2025-12-14 10:23,36,79,TIDAK
+cctv_28,SMP Negeri 3 Malang,Malang,gerbang,2025-12-14 10:14,13,44,TIDAK
+cctv_11,SMP Negeri 2 Denpasar,Denpasar,toilet,2025-12-14 07:46,63,47,YA
+cctv_3,SMA Negeri 3 Makassar,Makassar,kelas,2025-12-14 07:58,46,48,YA
