@@ -1,8 +1,8 @@
 {
-  "export_date": "2025-12-15 16:34:40",
-  "tweet_count": 10000,
-  "cctv_count": 6300,
-  "alert_count": 6945,
+  "export_date": "2025-12-15 19:44:04",
+  "tweet_count": 10500,
+  "cctv_count": 6600,
+  "alert_count": 7418,
   "files_generated": [
     "sentiment_distribution.csv",
     "risk_level_distribution.csv",
